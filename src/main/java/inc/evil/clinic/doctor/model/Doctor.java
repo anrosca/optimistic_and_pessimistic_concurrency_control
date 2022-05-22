@@ -21,6 +21,9 @@ public class Doctor extends AbstractEntity {
     @Enumerated(EnumType.STRING)
     private Specialty specialty;
 
+    @Version
+    private long version;
+
     protected Doctor() {
     }
 
@@ -46,6 +49,10 @@ public class Doctor extends AbstractEntity {
 
     public Specialty getSpecialty() {
         return this.specialty;
+    }
+
+    public long getVersion() {
+        return version;
     }
 
     public void setFirstName(String firstName) {

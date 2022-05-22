@@ -44,7 +44,8 @@ public class AppointmentService {
     }
 
     @Transactional
-    public Appointment create(Appointment appointmentToCreate) {
+//    @SchedulerLock(name = "EVALUATE_FRAUD_RULES_JOB_LOCK_NAME")
+    public synchronized Appointment create(Appointment appointmentToCreate) {
         checkForConflicts(appointmentToCreate);
         return appointmentRepository.save(appointmentToCreate);
     }
@@ -54,30 +55,13 @@ public class AppointmentService {
         LocalTime startTime = appointmentToCreate.getStartTime();
         LocalTime endTime = appointmentToCreate.getEndTime();
         String doctorId = appointmentToCreate.getDoctor().getId();
-        Doctor doctor = doctorRepository.findEnabledByIdAndLock(doctorId);
+        Doctor doctor = doctorRepository.findByIdAndLock(doctorId);
         Optional<Appointment> conflictingAppointment =
-                appointmentRepository.findConflictingAppointment(doctorId, appointmentDate, startTime, endTime, appointmentToCreate.getId());
+                appointmentRepository.findConflictingAppointment(doctorId, appointmentDate, startTime, endTime);
         conflictingAppointment.ifPresent(overlappingAppointment -> {
             throw new ConflictingAppointmentsException("Doctor " + doctor.getFirstName() + " " + doctor.getLastName() +
                     " has already an appointment, starting from " + overlappingAppointment.getStartTime() +
                     " till " + overlappingAppointment.getEndTime());
         });
-    }
-
-    @Transactional
-    public Appointment update(String id, Appointment newAppointment) {
-        checkForConflicts(newAppointment);
-        appointmentRepository.save(newAppointment);
-        return newAppointment;
-    }
-
-    @Transactional(readOnly = true)
-    public List<Appointment> findByDoctorId(String id) {
-        return appointmentRepository.findByDoctorId(id);
-    }
-
-    @Transactional(readOnly = true)
-    public List<Appointment> findByDoctorIdAndTimeRange(String id, LocalDate startDate, LocalDate endDate) {
-        return appointmentRepository.findByDoctorIdAndTimeRange(id, startDate, endDate);
     }
 }

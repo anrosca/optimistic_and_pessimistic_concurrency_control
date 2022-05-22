@@ -5,12 +5,9 @@ import inc.evil.clinic.appointment.service.AppointmentService;
 import inc.evil.clinic.appointment.web.AppointmentResponse;
 import inc.evil.clinic.appointment.web.UpsertAppointmentRequest;
 import inc.evil.clinic.doctor.service.DoctorService;
-import inc.evil.clinic.patient.model.Patient;
 import inc.evil.clinic.patient.service.PatientService;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Component
@@ -40,27 +37,7 @@ public class AppointmentFacade {
         appointmentService.deleteById(id);
     }
 
-    public List<AppointmentResponse> findAppointmentsByDoctorId(String doctorId) {
-        return appointmentService.findByDoctorId(doctorId)
-                .stream()
-                .map(AppointmentResponse::from)
-                .toList();
-    }
-
-    public List<AppointmentResponse> findAppointmentsByDoctorIdInTimeRange(String doctorId, LocalDate startDate, LocalDate endDate) {
-        return appointmentService.findByDoctorIdAndTimeRange(doctorId, startDate, endDate)
-                .stream()
-                .map(AppointmentResponse::from)
-                .toList();
-    }
-
-    public AppointmentResponse update(String id, UpsertAppointmentRequest request) {
-        Appointment newAppointment = toAppointment(request);
-        Appointment originalAppointment = appointmentService.findById(id);
-        return AppointmentResponse.from(appointmentService.update(id, originalAppointment.mergeWith(newAppointment)));
-    }
-
-    @Transactional
+//    @Retryable(ObjectOptimisticLockingFailureException.class)
     public AppointmentResponse create(UpsertAppointmentRequest request) {
         Appointment appointmentToCreate = toAppointment(request);
         Appointment createdAppointment = appointmentService.create(appointmentToCreate);
@@ -74,17 +51,8 @@ public class AppointmentFacade {
                 .endTime(request.getEndDate() != null ? request.getEndDate().toLocalTime() : null)
                 .operation(request.getOperation())
                 .doctor(request.getDoctorId() != null ? doctorService.findById(request.getDoctorId()) : null)
-                .patient(findOrCreatePatient(request))
+                .patient(patientService.findById(request.getPatientId()))
                 .details(request.getDetails())
                 .build();
     }
-
-    private Patient findOrCreatePatient(final UpsertAppointmentRequest request) {
-        if(request.isExistingPatient()){
-            return request.getPatientId() != null ? patientService.findById(request.getPatientId()) : null;
-        } else {
-            return patientService.create(request.getPatientRequest().toPatient());
-        }
-    }
-
 }
